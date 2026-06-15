@@ -6,8 +6,7 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB = path.join(__dirname, 'data.json');
-
+const DB = "/var/data/data.json";
 function baseData(){
   return {
     users: [],
