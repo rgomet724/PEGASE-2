@@ -66,10 +66,40 @@ app.get('/api/data', needLogin, (req,res)=>{
 app.post('/api/note', needLogin, needOperational, (req,res)=>{ const d=load(); d.notes[req.session.userId]=String(req.body.note||''); save(d); res.json({ok:true}); });
 app.post('/api/agents', needLogin, needAdmin, (req,res)=>{ const d=load(); d.agents=Array.isArray(req.body.agents)?req.body.agents:d.agents; audit(d,req,'Mise à jour personnel'); save(d); res.json({ok:true}); });
 app.post('/api/crew', needLogin, needOperational, (req,res)=>{
-  const d=load(); const c=req.body.crew||{}; if(!c.callsign) return res.status(400).json({error:'Indicatif obligatoire'});
-  if(c.id){ const i=d.crews.findIndex(x=>x.id===c.id); if(i<0) return res.status(404).json({error:'Équipage introuvable'}); d.crews[i]={...d.crews[i], callsign:c.callsign, matricules:c.matricules||[], observations:c.observations||''}; audit(d,req,'Modification équipage '+c.callsign); }
-  else { d.crews.push({id:Date.now().toString(), callsign:c.callsign, matricules:c.matricules||[], observations:c.observations||'', status:'DISPO', intervention:''}); audit(d,req,'Création équipage '+c.callsign); }
-  save(d); res.json({ok:true});
+  const d=load();
+  const c=req.body.crew||{};
+
+  if(!c.callsign) return res.status(400).json({error:'Indicatif obligatoire'});
+
+  if(c.id){
+    const i=d.crews.findIndex(x=>x.id===c.id);
+    if(i<0) return res.status(404).json({error:'Équipage introuvable'});
+
+    d.crews[i]={
+      ...d.crews[i],
+      callsign:c.callsign,
+      matricules:c.matricules||[],
+      observations:c.observations||'',
+      meal:c.meal||''
+    };
+
+    audit(d,req,'Modification équipage '+c.callsign);
+  } else {
+    d.crews.push({
+      id:Date.now().toString(),
+      callsign:c.callsign,
+      matricules:c.matricules||[],
+      observations:c.observations||'',
+      meal:c.meal||'',
+      status:'DISPO',
+      intervention:''
+    });
+
+    audit(d,req,'Création équipage '+c.callsign);
+  }
+
+  save(d);
+  res.json({ok:true});
 });
 app.delete('/api/crew/:id', needLogin, needOperational, (req,res)=>{ const d=load(); const c=d.crews.find(x=>x.id===req.params.id); d.crews=d.crews.filter(x=>x.id!==req.params.id); if(c) audit(d,req,'Suppression équipage '+c.callsign); save(d); res.json({ok:true}); });
 app.post('/api/crew/:id/status', needLogin, needOperational, (req,res)=>{ const d=load(); const c=d.crews.find(x=>x.id===req.params.id); if(!c) return res.status(404).json({error:'Équipage introuvable'}); c.status=req.body.status==='INDISPO'?'INDISPO':'DISPO'; c.intervention=c.status==='INDISPO'?String(req.body.intervention||'Intervention'):''; audit(d,req,`${c.callsign} ${c.status}${c.intervention?' - '+c.intervention:''}`); save(d); res.json({ok:true}); });
